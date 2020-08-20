@@ -1,0 +1,51 @@
+{
+  "author": {
+    "name": "Yosuke Matsusaka"
+  },
+  "bugs": {
+    "url": "https://github.com/yosuke/cordova-plugin-sandbox-file/issues"
+  },
+  "bundleDependencies": false,
+  "cordova": {
+    "id": "cordova-plugin-sandbox-file",
+    "platforms": [
+      "ios"
+    ]
+  },
+  "deprecated": false,
+  "description": "Cordova Sandbox File Plugin",
+  "devDependencies": {
+    "eslint": "^3.19.0",
+    "eslint-config-semistandard": "^11.0.0",
+    "eslint-config-standard": "^10.2.1",
+    "eslint-plugin-import": "^2.3.0",
+    "eslint-plugin-node": "^5.0.0",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-standard": "^3.0.1"
+  },
+  "engines": {
+    "cordovaDependencies": {
+      "0.0.0": {
+        "cordova": ">100"
+      }
+    }
+  },
+  "homepage": "https://github.com/yosuke/cordova-plugin-sandbox-file#readme",
+  "keywords": [
+    "cordova",
+    "file",
+    "ecosystem:cordova",
+    "cordova-ios"
+  ],
+  "license": "Apache-2.0",
+  "name": "cordova-plugin-sandbox-file",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yosuke/cordova-plugin-sandbox-file.git"
+  },
+  "scripts": {
+    "eslint": "node node_modules/eslint/bin/eslint www && node node_modules/eslint/bin/eslint src && node node_modules/eslint/bin/eslint tests",
+    "test": "npm run eslint"
+  },
+  "version": "0.0.1"
+}
