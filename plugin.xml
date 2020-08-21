@@ -38,10 +38,6 @@
         </config-file>
         <header-file src="src/ios/CDVSandboxFile.h" />
         <source-file src="src/ios/CDVSandboxFile.m" />
-
-        <js-module src="www/SandboxFile.js" name="sandboxfile">
-            <clobbers target="navigator.sandboxfile" />
-        </js-module>
     </platform>
 
 </plugin>

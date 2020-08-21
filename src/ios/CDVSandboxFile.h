@@ -17,14 +17,12 @@
  under the License.
  */
 
-#import <Foundation/Foundation.h>
+
 #import <Cordova/CDVPlugin.h>
 
-@interface CDVSandboxFile : CDVPlugin {}
+@interface CDVSandboxFile : CDVPlugin
 
-/* Exec API */
-- (void)readAsText:(CDVInvokedUrlCommand*)command;
-- (void)readAsDataURL:(CDVInvokedUrlCommand*)command;
-- (void)readAsArrayBuffer:(CDVInvokedUrlCommand*)command;
+@property (nonatomic, strong) NSData* data;
+@property (nonatomic, assign) BOOL pageLoaded;
 
 @end

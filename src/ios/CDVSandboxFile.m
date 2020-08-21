@@ -21,14 +21,13 @@
  Written by Yosuke Matsusaka
 
  Most of the code are from:
-  https://github.com/apache/cordova-plugin-file/blob/master/src/ios/CDVFile.m
+ https://github.com/apache/cordova-ios/blob/master/CordovaLib/Classes/Private/Plugins/CDVHandleOpenURL/CDVHandleOpenURL.m
+ and:
+ https://github.com/apache/cordova-plugin-file/blob/master/src/ios/CDVFile.m
  */
 
 #import <Cordova/CDV.h>
 #import "CDVSandboxFile.h"
-#import <objc/message.h>
-
-CDVSandboxFile *sandboxFilePlugin = nil;
 
 static NSString* toBase64(NSData* data) {
     SEL s1 = NSSelectorFromString(@"base64EncodedString");
@@ -49,115 +48,67 @@ static NSString* toBase64(NSData* data) {
 
 - (void)pluginInitialize
 {
-    sandboxFilePlugin = self;
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationLaunchedWithUrl:) name:CDVPluginHandleOpenURLNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationPageDidLoad:) name:CDVPageDidLoadNotification object:nil];
 }
 
-/* read and return file data
- * IN:
- * NSArray* arguments
- *	0 - NSString* fullPath
- *	1 - NSString* encoding
- */
-- (void)readAsText:(CDVInvokedUrlCommand*)command
+- (void)applicationLaunchedWithUrl:(NSNotification*)notification
 {
-    // arguments
-    NSURL *decodedURL = [NSURL URLWithString:command.arguments[0]];
-    NSString* encoding = [command argumentAtIndex:1];
+    NSURL* url = [notification object];
 
-    // TODO: implement
-    if ([@"UTF-8" caseInsensitiveCompare : encoding] != NSOrderedSame) {
-        NSLog(@"Only UTF-8 encodings are currently supported by readAsText");
-        CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_IO_EXCEPTION];
-        [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
-        return;
+    BOOL success = [url startAccessingSecurityScopedResource];
+    self.data = [NSData dataWithContentsOfURL:url];
+    if (success) {
+        [url stopAccessingSecurityScopedResource];
     }
 
-    __weak CDVSandboxFile* weakSelf = self;
-    [self.commandDelegate runInBackground:^ {
-        CDVPluginResult* result = nil;
-        NSData* data;
-        if ([decodedURL startAccessingSecurityScopedResource]) {
-            NSFileHandle* file = [NSFileHandle fileHandleForReadingFromURL:decodedURL error:nil];
-            data = [file readDataToEndOfFile];
-            [file closeFile];
-            [decodedURL stopAccessingSecurityScopedResource];
-            if (data != nil) {
-                NSString* str = [[NSString alloc] initWithBytesNoCopy:(void*)[data bytes] length:[data length] encoding:NSUTF8StringEncoding freeWhenDone:NO];
-                // Check that UTF8 conversion did not fail.
-                if (str != nil) {
-                    result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:str];
-                    result.associatedObject = data;
+    // warm-start handler
+    if (self.pageLoaded) {
+        [self processOpenUrl:self.data pageLoaded:YES];
+        self.data = nil;
+    }
+}
+
+- (void)applicationPageDidLoad:(NSNotification*)notification
+{
+    // cold-start handler
+
+    self.pageLoaded = YES;
+
+    if (self.data) {
+        [self processOpenUrl:self.data pageLoaded:YES];
+        self.data = nil;
+    }
+}
+
+- (void)processOpenUrl:(NSData*)data pageLoaded:(BOOL)pageLoaded
+{
+    __weak __typeof(self) weakSelf = self;
+
+    dispatch_block_t handleSandboxFile = ^(void) {
+        // calls into javascript global function 'handleOpenURL'
+        NSString* jsString = [NSString stringWithFormat:@"document.addEventListener('deviceready',function(){if (typeof handleSandboxFile === 'function') { handleSandboxFile(window.atob(\"%@\"));}});", toBase64(data)];
+
+        [weakSelf.webViewEngine evaluateJavaScript:jsString completionHandler:nil];
+    };
+
+    if (!pageLoaded) {
+        NSString* jsString = @"document.readystate";
+        [self.webViewEngine evaluateJavaScript:jsString
+                             completionHandler:^(id object, NSError* error) {
+            if ((error == nil) && [object isKindOfClass:[NSString class]]) {
+                NSString* readyState = (NSString*)object;
+                BOOL ready = [readyState isEqualToString:@"loaded"] || [readyState isEqualToString:@"complete"];
+                if (ready) {
+                    handleSandboxFile();
+                } else {
+                    self.data = data;
                 }
             }
-            if (result == nil) {
-                result = [CDVPluginResult resultWithStatus:CDVCommandStatus_IO_EXCEPTION];
-            }
-
-            [weakSelf.commandDelegate sendPluginResult:result callbackId:command.callbackId];
-        }
-    }];
-}
-
-/* Read content of text file and return as base64 encoded data url.
- * IN:
- * NSArray* arguments
- *	0 - NSString* fullPath
- */
-
-- (void)readAsDataURL:(CDVInvokedUrlCommand*)command
-{
-    NSURL *decodedURL = [NSURL URLWithString:command.arguments[0]];
-
-    __weak CDVSandboxFile* weakSelf = self;
-    [self.commandDelegate runInBackground:^ {
-        CDVPluginResult* result = nil;
-        NSData* data;
-        if ([decodedURL startAccessingSecurityScopedResource]) {
-            NSFileHandle* file = [NSFileHandle fileHandleForReadingFromURL:decodedURL error:nil];
-            data = [file readDataToEndOfFile];
-            [file closeFile];
-            [decodedURL stopAccessingSecurityScopedResource];
-        }
-        if (data != nil) {
-            NSString* b64Str = toBase64(data);
-            NSString* output = [NSString stringWithFormat:@"data:application/octet-stream;base64,%@", b64Str];
-            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:output];
-        } else {
-            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_IO_EXCEPTION];
-        }
-
-        [weakSelf.commandDelegate sendPluginResult:result callbackId:command.callbackId];
-    }];
-}
-
-/* Read content of text file and return as an arraybuffer
- * IN:
- * NSArray* arguments
- *	0 - NSString* fullPath
- */
-
-- (void)readAsArrayBuffer:(CDVInvokedUrlCommand*)command
-{
-    NSURL *decodedURL = [NSURL URLWithString:command.arguments[0]];
-
-    __weak CDVSandboxFile* weakSelf = self;
-    [self.commandDelegate runInBackground:^ {
-        CDVPluginResult* result = nil;
-        NSData* data;
-        if ([decodedURL startAccessingSecurityScopedResource]) {
-            NSFileHandle* file = [NSFileHandle fileHandleForReadingFromURL:decodedURL error:nil];
-            data = [file readDataToEndOfFile];
-            [file closeFile];
-            [decodedURL stopAccessingSecurityScopedResource];
-        }
-        if (data != nil) {
-            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArrayBuffer:data];
-        } else {
-            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_IO_EXCEPTION];
-        }
-
-        [weakSelf.commandDelegate sendPluginResult:result callbackId:command.callbackId];
-    }];
+        }];
+    } else {
+        handleSandboxFile();
+    }
 }
 
 @end

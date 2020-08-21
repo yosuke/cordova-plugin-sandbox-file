@@ -25,7 +25,68 @@ description: Read/write files in the iOS sandbox.
 
 This plugin calls `startAccessingSecurityScopedResource` iOS API before reading the file to be used in conjunction with iOS File app.
 
-This plugin defines global `navigator.sandboxfile` object.
+## Usage
+
+Add following lines to your config.xml.
+Be sure to customize UTTypeIdentifier and UTTypeTagSpecification to define your own filename extension:
+
+```xml
+<config-file parent="LSSupportsOpeningDocumentsInPlace" platform="ios" target="*-Info.plist">
+    <true />
+</config-file>
+<config-file parent="UIFileSharingEnabled" platform="ios" target="*-Info.plist">
+    <true />
+</config-file>
+<config-file parent="UTExportedTypeDeclarations" platform="ios" target="*-Info.plist">
+    <array>
+        <dict>
+            <key>CFBundleTypeIconFiles</key>
+            <array></array>
+            <key>UTTypeDescription</key>
+            <string>Sample Project File</string>
+            <key>UTTypeIdentifier</key>
+            <string>sampleproject.ext</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <string>ext</string>
+                <key>public.mime-type</key>
+                <string>application/x-example-project</string>
+            </dict>
+        </dict>
+    </array>
+</config-file>
+<config-file parent="CFBundleDocumentTypes" platform="ios" target="*-Info.plist">
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Sample Project File</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Owner</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>sampleproject.ext</string>
+            </array>
+        </dict>
+    </array>
+</config-file>
+```
+
+Write your application code:
+
+```javascript
+window.handleSandboxFile = (data) => {
+  // Add your code here. data is in ByteArray format.
+};
+```
+
+handleSandboxFile function should be fired after you select your file on iOS File app.
 
 ## Supported Platforms
 
