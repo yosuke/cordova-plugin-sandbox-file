@@ -40,7 +40,7 @@ static NSString* toBase64(NSData* data) {
         NSString* (*func)(id, SEL, NSUInteger) = (void *)[data methodForSelector:s2];
         return func(data, s2, 0);
     } else {
-        return nil;
+        return @"";
     }
 }
 
