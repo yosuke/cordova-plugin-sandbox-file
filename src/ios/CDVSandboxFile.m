@@ -54,17 +54,18 @@ static NSString* toBase64(NSData* data) {
 
 - (void)applicationLaunchedWithUrl:(NSNotification*)notification
 {
-    NSURL* url = [notification object];
+    self.url = [notification object];
 
-    BOOL success = [url startAccessingSecurityScopedResource];
-    self.data = [NSData dataWithContentsOfURL:url];
+    BOOL success = [self.url startAccessingSecurityScopedResource];
+    self.data = [NSData dataWithContentsOfURL:self.url];
     if (success) {
-        [url stopAccessingSecurityScopedResource];
+        [self.url stopAccessingSecurityScopedResource];
     }
 
     // warm-start handler
     if (self.pageLoaded) {
-        [self processOpenUrl:self.data pageLoaded:YES];
+        [self processOpenUrl:self.url data:self.data pageLoaded:YES];
+        self.url = nil;
         self.data = nil;
     }
 }
@@ -76,18 +77,19 @@ static NSString* toBase64(NSData* data) {
     self.pageLoaded = YES;
 
     if (self.data) {
-        [self processOpenUrl:self.data pageLoaded:YES];
+        [self processOpenUrl:self.url data:self.data pageLoaded:YES];
+        self.url = nil;
         self.data = nil;
     }
 }
 
-- (void)processOpenUrl:(NSData*)data pageLoaded:(BOOL)pageLoaded
+- (void)processOpenUrl:(NSURL*)url data:(NSData*)data pageLoaded:(BOOL)pageLoaded
 {
     __weak __typeof(self) weakSelf = self;
 
     dispatch_block_t handleSandboxFile = ^(void) {
         // calls into javascript global function 'handleOpenURL'
-        NSString* jsString = [NSString stringWithFormat:@"document.addEventListener('deviceready',function(){if (typeof handleSandboxFile === 'function') { handleSandboxFile(window.atob(\"%@\"));}});", toBase64(data)];
+        NSString* jsString = [NSString stringWithFormat:@"document.addEventListener('deviceready',function(){if (typeof handleSandboxFile === 'function') { handleSandboxFile(\"%@\", window.atob(\"%@\"));}});", [url absoluteString], toBase64(data)];
 
         [weakSelf.webViewEngine evaluateJavaScript:jsString completionHandler:nil];
     };
@@ -102,6 +104,7 @@ static NSString* toBase64(NSData* data) {
                 if (ready) {
                     handleSandboxFile();
                 } else {
+                    self.url = url;
                     self.data = data;
                 }
             }

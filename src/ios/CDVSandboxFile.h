@@ -22,6 +22,7 @@
 
 @interface CDVSandboxFile : CDVPlugin
 
+@property (nonatomic, strong) NSURL* url;
 @property (nonatomic, strong) NSData* data;
 @property (nonatomic, assign) BOOL pageLoaded;
 

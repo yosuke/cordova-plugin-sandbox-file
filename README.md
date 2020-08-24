@@ -81,7 +81,7 @@ Be sure to customize UTTypeIdentifier and UTTypeTagSpecification to define your 
 Write your application code:
 
 ```javascript
-window.handleSandboxFile = (data) => {
+window.handleSandboxFile = (url, data) => {
   // Add your code here. data is in ByteArray format.
 };
 ```
