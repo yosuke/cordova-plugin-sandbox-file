@@ -57,17 +57,20 @@ static NSString* toBase64(NSData* data) {
     self.url = [notification object];
 
     BOOL success = [self.url startAccessingSecurityScopedResource];
-    self.data = [NSData dataWithContentsOfURL:self.url];
-    if (success) {
-        [self.url stopAccessingSecurityScopedResource];
-    }
-
-    // warm-start handler
-    if (self.pageLoaded) {
-        [self processOpenUrl:self.url data:self.data pageLoaded:YES];
-        self.url = nil;
-        self.data = nil;
-    }
+    NSError *error = nil;
+    NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:nil];
+    [coordinator coordinateReadingItemAtURL:self.url options:0 error:&error byAccessor:^(NSURL *newURL) {
+        self.data = [NSData dataWithContentsOfURL:newURL];
+        if (success) {
+            [self.url stopAccessingSecurityScopedResource];
+        }
+        // warm-start handler
+        if (self.pageLoaded) {
+            [self processOpenUrl:self.url data:self.data pageLoaded:YES];
+            self.url = nil;
+            self.data = nil;
+        }
+    }];
 }
 
 - (void)applicationPageDidLoad:(NSNotification*)notification
